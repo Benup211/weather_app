@@ -14,6 +14,8 @@ const TabLayout=()=>{
                 }) => (
                     <House color={'black'}/>
                 ),
+                headerShown: false,
+                tabBarShowLabel: false
             }}
             />
         </Tabs>
