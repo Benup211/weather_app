@@ -10,29 +10,58 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { SearchIcon, Calendar } from "lucide-react-native";
 import { useState, useEffect } from "react";
 import { fetchLocationCoordinates } from "../services/locationData";
+import Toast from "react-native-toast-message";
 
 export default function App() {
     const [showSearch, setShowSearch] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
-
     const [apiData, setApiData] = useState<any>([]);
     const [DailyData, setDailyData] = useState<any>([]);
-    useEffect(() => {
-        const fetchData=async()=>{
-            fetchLocationCoordinates("Lalitpur")
-            .then((data) => {
-                setApiData(data);
-                setDailyData(data.list.slice(1, 6));
-            })
-            .catch((error) => {
-                console.error(error);
-            })
-            .finally(() =>{
-                setIsLoading(false);
+    const [searchQuery, setSearchQuery] = useState(""); // New state for search query
+
+    const fetchWeatherData = async (location: string) => {
+        setIsLoading(true);
+        try {
+            const data = await fetchLocationCoordinates(location);
+            setApiData(data);
+            setDailyData(data.list.slice(1, 6));
+        } catch (error) {
+            Toast.show({
+                type: "error",
+                text1: "Error",
+                text2: `${error}`,
+                position: "bottom",
             });
+        } finally {
+            setIsLoading(false);
         }
-        fetchData();
+    };
+
+    useEffect(() => {
+        fetchWeatherData("Lalitpur");
     }, []);
+
+    const handleSearch = () => {
+        if (searchQuery) {
+            fetchLocationCoordinates(searchQuery)
+                .then((data) => {
+                    setApiData(data);
+                    setDailyData(data.list.slice(1, 6));
+                })
+                .catch((error) => {
+                    Toast.show({
+                        type: "error",
+                        text1: "Error",
+                        text2: `${error}`,
+                        position: "bottom",
+                    });
+                });
+            setShowSearch(false);
+            setSearchQuery("");
+        }
+        setShowSearch(false);
+    };
+
     if (isLoading) {
         return (
             <View className="w-screen min-h-screen flex justify-center items-center">
@@ -40,6 +69,7 @@ export default function App() {
             </View>
         );
     }
+
     return (
         <View className="w-screen min-h-screen flex">
             <ScrollView showsVerticalScrollIndicator={true}>
@@ -52,6 +82,8 @@ export default function App() {
                         >
                             {showSearch && (
                                 <TextInput
+                                    value={searchQuery}
+                                    onChangeText={setSearchQuery}
                                     placeholder="Search City"
                                     placeholderTextColor={"white"}
                                     className="pl-6 h-10 flex-1 text-base text-white outline-none"
@@ -60,14 +92,18 @@ export default function App() {
                             <Pressable
                                 className="rounded-full p-3 m-1 bg-slate-600"
                                 onPress={() => {
-                                    setShowSearch(!showSearch);
+                                    if (!showSearch) {
+                                        setShowSearch(true);
+                                    } else {
+                                        handleSearch();
+                                    }
                                 }}
                             >
                                 <SearchIcon size={24} color={"#ffffff"} />
                             </Pressable>
                         </View>
                         {/* Data */}
-                        <View className="mx-4 flex justify-around flex-1 mb-2 lg:justify-center  lg:items-center">
+                        <View className="mx-4 flex justify-around flex-1 mb-2 lg:justify-center lg:items-center">
                             <Text className="text-white text-2xl text-center font-bold lg:mb-10">
                                 {apiData.city.name},
                                 <Text className="text-white text-lg text-center font-semibold">
@@ -76,7 +112,9 @@ export default function App() {
                             </Text>
                             <View className="flex-row justify-center">
                                 <Image
-                                    source={require("../../assets/sun.png")}
+                                    source={{
+                                        uri: `https://openweathermap.org/img/wn/${apiData.list[0].weather[0].icon}@4x.png`,
+                                    }}
                                     style={{ height: 240, width: 240 }}
                                 />
                             </View>
@@ -144,13 +182,22 @@ export default function App() {
                                     {DailyData.map(
                                         (data: any, index: number) => {
                                             return (
-                                                <View className="flex justify-center items-center w-28 rounded-3xl py-3 space-y-1 mr-4 bg-gray-600" key={index}>
+                                                <View
+                                                    className="flex justify-center items-center w-28 rounded-3xl py-3 space-y-1 mr-4 bg-gray-800"
+                                                    key={index}
+                                                >
+                                                    <Text className="text-white text-[12px] font-semibold text-center">
+                                                        {data.weather[0].description.toUpperCase()}
+                                                    </Text>
                                                     <Image
-                                                        source={require("../../assets/sun.png")}
+                                                        source={{
+                                                            uri: `https://openweathermap.org/img/wn/${data.weather[0].icon}@4x.png`,
+                                                        }}
                                                         style={{
                                                             height: 44,
                                                             width: 44,
                                                         }}
+                                                        alt={`${data.weather[0].main} icon`}
                                                     />
                                                     <Text className="text-white">
                                                         {new Date(
@@ -167,8 +214,8 @@ export default function App() {
                                                     </Text>
                                                     <Text className="text-white text-xl font-semibold">
                                                         {(
-                                                            data.main
-                                                                .temp - 273.15
+                                                            data.main.temp -
+                                                            273.15
                                                         ).toFixed(1)}
                                                         °C
                                                     </Text>
@@ -182,6 +229,7 @@ export default function App() {
                     </SafeAreaView>
                 </View>
             </ScrollView>
+            <Toast />
         </View>
     );
 }

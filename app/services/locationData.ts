@@ -11,10 +11,18 @@ export const fetchLocationCoordinates = async (location: string): Promise<any> =
         appid: API_KEY,
       },
     });
-
+    console.log('response:', response.data.message);
+    if (response.data.cod !== "200") {
+      throw new Error(response.data.message || 'Error fetching data');
+    }
     return response.data;
   } catch (error) {
-    console.error('Error fetching location coordinates:', error);
+    if (axios.isAxiosError(error) && error.response) {
+      console.error('Error fetching location coordinates:', error.response.data.message);
+      throw new Error(error.response.data.message);
+    } else {
+      console.error('Error fetching location coordinates:', error);
+    }
     throw error;
   }
 };
